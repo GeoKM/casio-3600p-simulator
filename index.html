@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASIO fx-3600P Simulator</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --body: #D4D0C4;
+  --body-dark: #B8B4A8;
+  --body-shadow: #9A968C;
+  --bezel: #3A3A38;
+  --lcd-bg: #B8D0A0;
+  --lcd-on: #4A5A3A;
+  --lcd-ghost: #7A8A6A;
+  --key-face: #E8E8E0;
+  --key-pressed: #C8C8C0;
+  --key-text: #2A2A2A;
+  --key-shift: #C84B00;
+  --key-2ndf: #2A5A2A;
+  --brand: #4A4A48;
+  --accent: #8B7355;
+}
+
+html, body {
+  height: 100%;
+  background: #2A2A2A;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+    radial-gradient(ellipse at 50% 0%, #3A3A3A 0%, #1A1A1A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', monospace;
+  user-select: none;
+  overflow: hidden;
+}
+
+.calc-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.6));
+}
+
+/* ── Calculator Body ─────────────────────────────────────── */
+.calc-body {
+  background: linear-gradient(160deg, #DDD9CD 0%, var(--body) 20%, var(--body-dark) 100%);
+  border-radius: 12px 12px 14px 14px;
+  padding: 12px 14px 16px;
+  width: 340px;
+  position: relative;
+  border: 1px solid var(--body-shadow);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -2px 0 rgba(0,0,0,0.1),
+    0 2px 0 var(--body-shadow),
+    0 4px 0 #8A8078,
+    0 8px 16px rgba(0,0,0,0.3);
+}
+
+/* Top brand strip */
+.calc-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.calc-brand {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--brand);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-family: 'Arial Black', Arial, sans-serif;
+}
+
+.calc-model {
+  font-size: 10px;
+  color: var(--brand);
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+}
+
+.calc-sublabel {
+  font-size: 7px;
+  color: var(--brand);
+  letter-spacing: 0.5px;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+/* ── Display ──────────────────────────────────────────────── */
+.display-bezel {
+  background: var(--bezel);
+  border-radius: 4px;
+  padding: 6px 8px 5px;
+  margin-bottom: 10px;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.6),
+    0 1px 0 rgba(255,255,255,0.1);
+}
+
+.display-window {
+  background: var(--lcd-bg);
+  border-radius: 2px;
+  padding: 6px 8px 4px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+  /* LCD grid texture */
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 5px,
+      rgba(0,0,0,0.03) 5px,
+      rgba(0,0,0,0.03) 6px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 9px,
+      rgba(0,0,0,0.03) 9px,
+      rgba(0,0,0,0.03) 10px
+    );
+}
+
+/* Scanline overlay */
+.display-window::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 1px,
+    rgba(0,0,0,0.06) 1px,
+    rgba(0,0,0,0.06) 2px
+  );
+  pointer-events: none;
+}
+
+.display-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0;
+  height: 36px;
+}
+
+.mode-indicators {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: flex-start;
+  padding-right: 6px;
+  padding-top: 2px;
+}
+
+.mode-ind {
+  font-size: 7px;
+  color: var(--lcd-ghost);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  transition: color 0.1s;
+}
+
+.mode-ind.active {
+  color: var(--lcd-on);
+}
+
+.mode-ind.blink {
+  animation: blink 0.6s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.digit-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex: 1;
+  gap: 0;
+  height: 32px;
+}
+
+.digit-char {
+  width: 16px;
+  height: 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  font-size: 22px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: var(--lcd-on);
+  line-height: 1;
+  padding-bottom: 2px;
+  position: relative;
+  text-shadow: 0 0 4px rgba(74,90,58,0.4);
+}
+
+.digit-char.dot {
+  width: 6px;
+  color: var(--lcd-on);
+}
+
+.digit-char.sep {
+  width: 6px;
+  color: var(--lcd-on);
+}
+
+.digit-char.exp {
+  font-size: 12px;
+  height: 28px;
+  padding-bottom: 0;
+  align-self: flex-start;
+  padding-top: 4px;
+}
+
+/* Step counter bar */
+.step-bar {
+  display: flex;
+  gap: 2px;
+  margin-top: 3px;
+  padding: 0 2px;
+  height: 4px;
+}
+
+.step-pip {
+  flex: 1;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--lcd-ghost);
+  opacity: 0.3;
+}
+
+.step-pip.used {
+  background: var(--lcd-on);
+  opacity: 0.7;
+}
+
+/* ── Keyboard ─────────────────────────────────────────────── */
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px 5px;
+  padding: 0 2px;
+}
+
+/* TOP ROW — special keys */
+.key-top-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px 5px;
+  margin-bottom: 2px;
+}
+
+.key {
+  height: 30px;
+  background: linear-gradient(180deg, var(--key-face) 0%, #DEDED6 100%);
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  box-shadow:
+    0 2px 0 #B0ACA4,
+    0 3px 0 #9A968C,
+    inset 0 1px 0 rgba(255,255,255,0.8);
+  transition: transform 60ms, box-shadow 60ms;
+  overflow: hidden;
+}
+
+.key:active, .key.pressed {
+  transform: translateY(2px);
+  box-shadow:
+    0 0px 0 #B0ACA4,
+    0 1px 0 #9A968C,
+    inset 0 1px 0 rgba(255,255,255,0.4);
+  background: linear-gradient(180deg, var(--key-pressed) 0%, #C0C0B8 100%);
+}
+
+.key-lbl {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--key-text);
+  line-height: 1.2;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.key-lbl-lg {
+  font-size: 13px;
+}
+
+.key-sub {
+  font-size: 7.5px;
+  color: var(--key-shift);
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.key-sub2 {
+  font-size: 7.5px;
+  color: var(--key-2ndf);
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.key-fn3 {
+  font-size: 6px;
+  color: #888;
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  line-height: 1;
+}
+
+/* PROGRAM KEYS — bottom row */
+.key-prog-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px 5px;
+  margin-top: 4px;
+}
+
+.key-prog {
+  height: 28px;
+  background: linear-gradient(180deg, #D0CCC4 0%, #BEBEB6 100%);
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 2px 0 #9A968C,
+    0 3px 0 #8A8078,
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: transform 60ms, box-shadow 60ms;
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--key-text);
+  letter-spacing: 0.3px;
+}
+
+.key-prog:active, .key-prog.pressed {
+  transform: translateY(2px);
+  box-shadow:
+    0 0px 0 #9A968C,
+    0 1px 0 #8A8078,
+    inset 0 1px 0 rgba(255,255,255,0.3);
+  background: linear-gradient(180deg, #C0BEB8 0%, #B0AEA8 100%);
+}
+
+/* SHIFT active state */
+.key.shift-active {
+  background: linear-gradient(180deg, #FFE4CC 0%, #F0D0B0 100%);
+  border-color: rgba(200, 100, 0, 0.3);
+}
+
+.key.secondf-active {
+  background: linear-gradient(180deg, #CCECC8 0%, #B0D8A8 100%);
+  border-color: rgba(40, 100, 40, 0.3);
+}
+
+/* ── Speaker icon ────────────────────────────────────────── */
+.speaker-icon {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.speaker-icon:hover { opacity: 0.8; }
+.speaker-icon.muted { opacity: 0.25; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.calc-footer {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 7px;
+  color: var(--body-dark);
+  letter-spacing: 0.5px;
+}
+
+/* ── LCD power-on/off animation ──────────────────────────── */
+.display-off .digit-char,
+.display-off .mode-ind {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+.display-fading .digit-char,
+.display-fading .mode-ind {
+  transition: color 0.3s, text-shadow 0.3s;
+}
+</style>
+</head>
+<body>
+<div class="calc-wrapper">
+  <div class="calc-body">
+    <!-- Brand -->
+    <div class="calc-top">
+      <span class="calc-brand">CASIO</span>
+      <span class="calc-model">fx-3600P</span>
+      <span class="calc-sublabel">Scientific Calculator</span>
+    </div>
+
+    <!-- Display -->
+    <div class="display-bezel">
+      <div class="display-window" id="display">
+        <div class="display-inner">
+          <div class="mode-indicators">
+            <span class="mode-ind" id="ind-DEG">DEG</span>
+            <span class="mode-ind" id="ind-RAD">RAD</span>
+            <span class="mode-ind" id="ind-GRAD">GRAD</span>
+            <span class="mode-ind" id="ind-LRN">LRN</span>
+            <span class="mode-ind" id="ind-STAT">STAT</span>
+          </div>
+          <div class="digit-row" id="digitRow"></div>
+        </div>
+        <div class="step-bar" id="stepBar"></div>
+      </div>
+    </div>
+
+    <!-- Keyboard -->
+    <div class="keyboard" id="keyboard">
+      <!-- Top special row -->
+      <div class="key-top-row">
+        <div class="key" data-key="SHIFT" data-code="SHIFT">
+          <span class="key-lbl">SHIFT</span>
+        </div>
+        <div class="key" data-key="MODE" data-code="MODE">
+          <span class="key-lbl">MODE</span>
+        </div>
+        <div class="key" data-key="2ndF" data-code="2ndF">
+          <span class="key-lbl">2ndF</span>
+        </div>
+        <div class="key" data-key="K" data-code="K">
+          <span class="key-lbl">K</span>
+          <span class="key-sub">DRG</span>
+        </div>
+        <div class="key" data-key="OFF" data-code="OFF">
+          <span class="key-lbl">OFF</span>
+        </div>
+      </div>
+
+      <!-- Row 1 -->
+      <div class="key" data-key="AC" data-code="AC"><span class="key-lbl">AC</span></div>
+      <div class="key" data-key="C" data-code="C"><span class="key-lbl">C</span></div>
+      <div class="key" data-key="NEG" data-code="NEG">
+        <span class="key-lbl">(-)</span>
+      </div>
+      <div class="key" data-key="ENG" data-code="ENG">
+        <span class="key-lbl">ENG</span>
+      </div>
+      <div class="key" data-key="DEL" data-code="DEL">
+        <span class="key-lbl">DEL</span>
+        <span class="key-sub">INS</span>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="key" data-key="7" data-code="7"><span class="key-lbl">7</span></div>
+      <div class="key" data-key="8" data-code="8"><span class="key-lbl">8</span></div>
+      <div class="key" data-key="9" data-code="9"><span class="key-lbl">9</span></div>
+      <div class="key" data-key="DIV" data-code="DIV">
+        <span class="key-lbl">÷</span>
+      </div>
+      <div class="key" data-key="INS" data-code="INS">
+        <span class="key-lbl">INS</span>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="key" data-key="4" data-code="4"><span class="key-lbl">4</span></div>
+      <div class="key" data-key="5" data-code="5"><span class="key-lbl">5</span></div>
+      <div class="key" data-key="6" data-code="6"><span class="key-lbl">6</span></div>
+      <div class="key" data-key="MUL" data-code="MUL">
+        <span class="key-lbl">×</span>
+      </div>
+      <div class="key" data-key="HLT" data-code="HLT">
+        <span class="key-lbl">HLT</span>
+        <span class="key-sub">INV</span>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="key" data-key="1" data-code="1"><span class="key-lbl">1</span></div>
+      <div class="key" data-key="2" data-code="2"><span class="key-lbl">2</span></div>
+      <div class="key" data-key="3" data-code="3"><span class="key-lbl">3</span></div>
+      <div class="key" data-key="SUB" data-code="SUB">
+        <span class="key-lbl">−</span>
+      </div>
+      <div class="key" data-key="ENT" data-code="ENT">
+        <span class="key-lbl">ENT</span>
+      </div>
+
+      <!-- Row 5 -->
+      <div class="key" data-key="0" data-code="0"><span class="key-lbl">0</span></div>
+      <div class="key" data-key="DOT" data-code="DOT"><span class="key-lbl">.</span></div>
+      <div class="key" data-key="EXP" data-code="EXP">
+        <span class="key-lbl">EXP</span>
+      </div>
+      <div class="key" data-key="ADD" data-code="ADD">
+        <span class="key-lbl">+</span>
+      </div>
+      <div class="key" data-key="EQ" data-code="EQ">
+        <span class="key-lbl">=</span>
+      </div>
+
+      <!-- Row 6 -->
+      <div class="key" data-key="RECIP" data-code="RECIP">
+        <span class="key-lbl">1/x</span>
+        <span class="key-sub">x²</span>
+      </div>
+      <div class="key" data-key="SQR" data-code="SQR">
+        <span class="key-lbl">√x</span>
+      </div>
+      <div class="key" data-key="Y" data-code="Y">
+        <span class="key-lbl">↑</span>
+      </div>
+      <div class="key" data-key="LPRN" data-code="LPRN">
+        <span class="key-lbl">(</span>
+      </div>
+      <div class="key" data-key="RPRN" data-code="RPRN">
+        <span class="key-lbl">)</span>
+      </div>
+
+      <!-- Row 7 -->
+      <div class="key" data-key="PI" data-code="PI">
+        <span class="key-lbl">π</span>
+        <span class="key-sub">e</span>
+      </div>
+      <div class="key" data-key="FACT" data-code="FACT">
+        <span class="key-lbl">x!</span>
+      </div>
+      <div class="key" data-key="PCT" data-code="PCT">
+        <span class="key-lbl">%</span>
+      </div>
+      <div class="key" data-key="DRG" data-code="DRG">
+        <span class="key-lbl">DRG</span>
+      </div>
+      <div class="key" data-key="LBRK" data-code="LBRK">
+        <span class="key-lbl">[</span>
+        <span class="key-sub2">nCr</span>
+      </div>
+
+      <!-- Row 8 -->
+      <div class="key" data-key="SIN" data-code="SIN">
+        <span class="key-lbl">sin</span>
+        <span class="key-sub">sin⁻¹</span>
+      </div>
+      <div class="key" data-key="COS" data-code="COS">
+        <span class="key-lbl">cos</span>
+        <span class="key-sub">cos⁻¹</span>
+      </div>
+      <div class="key" data-key="TAN" data-code="TAN">
+        <span class="key-lbl">tan</span>
+        <span class="key-sub">tan⁻¹</span>
+      </div>
+      <div class="key" data-key="LOG" data-code="LOG">
+        <span class="key-lbl">log</span>
+        <span class="key-sub">10ˣ</span>
+      </div>
+      <div class="key" data-key="LN" data-code="LN">
+        <span class="key-lbl">ln</span>
+        <span class="key-sub">eˣ</span>
+      </div>
+
+      <!-- Program row -->
+      <div class="key-prog-row">
+        <div class="key-prog" data-key="P1" data-code="P1">P1</div>
+        <div class="key-prog" data-key="P2" data-code="P2">P2</div>
+        <div class="key-prog" data-key="P3" data-code="P3">P3</div>
+        <div class="key-prog" data-key="STO" data-code="STO">x→M</div>
+        <div class="key-prog" data-key="SWAP" data-code="SWAP">x↔M</div>
+      </div>
+    </div>
+
+    <!-- Speaker icon -->
+    <svg class="speaker-icon" id="speakerIcon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 5.5H4L7 3V13L4 10.5H2V5.5Z" fill="#4A4A48"/>
+      <path d="M9.5 5C10.3 5.8 10.8 6.8 10.8 8C10.8 9.2 10.3 10.2 9.5 11" stroke="#4A4A48" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M11.5 3.5C12.9 4.9 13.8 6.9 13.8 8C13.8 9.1 12.9 11.1 11.5 12.5" stroke="#4A4A48" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="calc-footer">fx-3600P Web Simulator</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CASIO fx-3600P Simulator — Core Engine
+// ═══════════════════════════════════════════════════════════════
+
+const PI = Math.PI;
+const E  = Math.E;
+const MAX_STEPS = 38;
+const DISPLAY_DIGITS = 10;
+
+// ── State ──────────────────────────────────────────────────────
+const state = {
+  display:     '0.',
+  accumulator: 0,
+  pendingOp:   null,    // { op: '+'|'-'|'*'|'/'|'^', rhs: number }
+  memory:      0,
+  K:           null,   // constant memory
+  angleMode:   'DEG',  // 'DEG' | 'RAD' | 'GRAD'
+  mode:        'CALC', // 'CALC' | 'LRN' | 'STAT' | 'SD'
+  lrnSlot:     null,   // 'P1' | 'P2' | 'P3'
+  lrnStep:     0,
+  programs:    { P1: [], P2: [], P3: [] },
+  shift:       false,
+  secondf:     false,
+  inv:         false,
+  powered:     true,
+  error:       false,
+  waitENT:     false,
+  waitHLT:     false,
+  progRunning: false,
+  progIP:      0,
+  progStack:   [],
+  inputBuffer: '',
+  lastVal:     0,      // last entered value (used in program execution)
+  afterEquals: false,  // true after = is pressed; next digit clears pendingOp
+  ENGactive:   false,
+  lastDisplays: [],   // for ENG roll
+  statData:    [],
+  beep:        true,
+  beepMuted:   false,
+};
+
+// ── Audio ──────────────────────────────────────────────────────
+let audioCtx = null;
+
+function ensureAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function beep(freq = 800, dur = 30, type = 'square', vol = 0.04) {
+  if (state.beepMuted) return;
+  try {
+    ensureAudio();
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur / 1000);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + dur / 1000);
+  } catch (e) {}
+}
+
+function errorBeep() {
+  beep(200, 150, 'sawtooth', 0.06);
+}
+
+function powerOnBeep() {
+  try {
+    ensureAudio();
+    [400, 600].forEach((f, i) => {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'square';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.08 + 0.1);
+      osc.start(audioCtx.currentTime + i * 0.08);
+      osc.stop(audioCtx.currentTime + i * 0.08 + 0.1);
+    });
+  } catch (e) {}
+}
+
+// ── Angle conversion ───────────────────────────────────────────
+function toRad(x) {
+  if (state.angleMode === 'DEG')  return x * PI / 180;
+  if (state.angleMode === 'GRAD') return x * PI / 200;
+  return x;
+}
+
+function fromRad(x) {
+  if (state.angleMode === 'DEG')  return x * 180 / PI;
+  if (state.angleMode === 'GRAD') return x * 200 / PI;
+  return x;
+}
+
+// ── Factorial ──────────────────────────────────────────────────
+function fact(n) {
+  n = Math.floor(n);
+  if (n < 0 || n > 170) return NaN;
+  if (n === 0 || n === 1) return 1;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
+}
+
+// ── Display formatting ─────────────────────────────────────────
+function fmt(n) {
+  if (!isFinite(n)) return 'Error';
+  if (Math.abs(n) >= 1e10 || (Math.abs(n) < 1e-4 && n !== 0)) {
+    // Scientific notation
+    let exp = Math.floor(Math.log10(Math.abs(n)));
+    let man = n / Math.pow(10, exp);
+    if (man < 0) man = -man; // keep sign separate
+    let manStr = man.toPrecision(DISPLAY_DIGITS - 1);
+    manStr = parseFloat(manStr).toPrecision(DISPLAY_DIGITS - 1);
+    let manDigits = manStr.replace('.', '').replace('-', '');
+    let dotPos = manStr.indexOf('.');
+    let intDigits = dotPos === -1 ? manStr.length : dotPos;
+    // pad to DISPLAY_DIGITS
+    while (manDigits.length < DISPLAY_DIGITS) manDigits += '0';
+    if (manDigits.length > DISPLAY_DIGITS) manDigits = manDigits.slice(0, DISPLAY_DIGITS);
+    // split mantissa into whole.fraction (max 6 whole, rest fractional)
+    let whole = manDigits.slice(0, 1);
+    let frac  = manDigits.slice(1);
+    let expStr = exp.toString();
+    if (exp >= 0 && exp < 10) expStr = '+' + expStr;
+    return whole + '.' + frac + ' ' + expStr;
+  }
+  // Normal — up to 10 significant digits
+  let s = parseFloat(n.toPrecision(DISPLAY_DIGITS)).toString();
+  if (s === '0') return '0.';
+  if (s.length <= DISPLAY_DIGITS + 1) return s;
+  return parseFloat(n.toPrecision(DISPLAY_DIGITS)).toString();
+}
+
+function displayForLCD(n) {
+  if (!state.powered) return [];
+  if (n === 'Error') return ['E', 'r', 'r', 'o', 'r'];
+  let s = fmt(n);
+  let chars = [];
+  let i = 0;
+  let hasExp = false;
+  let expPart = '';
+  // Check for exponent
+  let expIdx = s.indexOf(' ');
+  if (expIdx !== -1) {
+    expPart = s.slice(expIdx + 1);
+    s = s.slice(0, expIdx);
+    hasExp = true;
+  }
+  // Handle negative
+  if (s.startsWith('-')) {
+    chars.push('−');
+    s = s.slice(1);
+  } else if (s.startsWith('+')) {
+    s = s.slice(1);
+  }
+  // Split mantissa and fraction
+  let dotIdx = s.indexOf('.');
+  if (dotIdx === -1) dotIdx = s.length;
+  // Build character array (max DISPLAY_DIGITS chars for mantissa)
+  let man = s.replace('.', '');
+  if (man.length > DISPLAY_DIGITS) {
+    man = man.slice(0, DISPLAY_DIGITS);
+  }
+  let out = [];
+  for (let c of man) {
+    if (c === '.') continue;
+    out.push(c);
+  }
+  // Add decimal after the first digit of mantissa
+  if (dotIdx > 0 && out.length > 0) {
+    // Insert . after position (dotIdx-1) in out
+    // out currently has no decimal, insert it
+  }
+  // Simpler: just show the digits with a dot
+  out = [];
+  let digitsSeen = 0;
+  let digitCount = 0;
+  let pos = 0;
+  let seenDot = false;
+  while (digitsSeen < DISPLAY_DIGITS && pos < s.length) {
+    let c = s[pos];
+    if (c === '.') {
+      out.push('·');
+      seenDot = true;
+    } else if (c === 'e' || c === 'E') {
+      // end of mantissa, exponent follows
+      break;
+    } else {
+      out.push(c);
+      digitCount++;
+      if (seenDot || digitCount <= dotIdx) {
+        // counting
+      }
+      digitsSeen++;
+    }
+    pos++;
+  }
+  // Add decimal point after the appropriate whole-number digit
+  // We need to figure out where the decimal goes:
+  // If s = "123.456" → "1 2 3 · 4 5 6"
+  // If s = "1234567" → "1 2 3 4 5 6"
+  // If s = "0.00123" → "0 · 0 0 1 2 3"
+  // Let's redo: build from scratch
+  let rawDigits = s.replace('.', '').replace(/[−+]/g, '');
+  if (rawDigits.length > DISPLAY_DIGITS) {
+    rawDigits = rawDigits.slice(0, DISPLAY_DIGITS);
+  }
+  out = [];
+  if (s.startsWith('−')) out.push('−');
+  let dp = s.indexOf('.');
+  if (dp === -1) dp = s.length;
+  // clamp dp to how many whole digits we have room for
+  let whole = s.slice(0, dp).replace(/[−+]/g, '');
+  let frac  = s.slice(dp + 1).replace('.', '');
+  let fracIdx = 0;
+  for (let i = 0; i < whole.length; i++) {
+    out.push(whole[i]);
+  }
+  if (whole.length > 0) out.push('·');
+  for (let i = 0; i < frac.length; i++) {
+    out.push(frac[i]);
+  }
+  // pad to DISPLAY_DIGITS if needed
+  while (out.filter(c => c !== '·' && c !== '−').length < DISPLAY_DIGITS) {
+    out.push('0');
+  }
+  // truncate excess
+  let significant = out.filter(c => c !== '·' && c !== '−');
+  while (significant.length > DISPLAY_DIGITS) {
+    // find the last · and remove one digit after it, or last digit
+    let dotIdx2 = out.lastIndexOf('·');
+    if (dotIdx2 !== -1 && dotIdx2 + 1 < out.length) {
+      out.splice(dotIdx2 + 1, 1);
+    } else {
+      out.pop();
+    }
+    significant = out.filter(c => c !== '·' && c !== '−');
+  }
+  if (hasExp) {
+    out.push(' ');
+    // expPart like '+05' or '-03'
+    out.push('E');
+    out.push(expPart[0]); // + or -
+    let expDigits = expPart.slice(1);
+    while (expDigits.length < 2) expDigits = '0' + expDigits;
+    out.push(expDigits[0]);
+    out.push(expDigits[1]);
+  }
+  return out;
+}
+
+// ── Update display ─────────────────────────────────────────────
+function updateDisplay() {
+  const row = document.getElementById('digitRow');
+  if (!row) return;
+  const chars = state.powered ? displayForLCD(state.error ? 'Error' : state.accumulator) : [];
+  row.innerHTML = '';
+  if (!state.powered) {
+    document.getElementById('display').classList.add('display-off');
+    document.getElementById('display').classList.remove('display-fading');
+  } else {
+    document.getElementById('display').classList.remove('display-off');
+    if (chars.length === 0) {
+      row.innerHTML = '<div class="digit-char">0</div><div class="digit-char dot">·</div>';
+    } else {
+      chars.forEach(c => {
+        const d = document.createElement('div');
+        if (c === '·') {
+          d.className = 'digit-char dot';
+          d.textContent = '·';
+        } else if (c === '−') {
+          d.className = 'digit-char';
+          d.textContent = '−';
+        } else if (c === ' ') {
+          d.className = 'digit-char sep';
+          d.textContent = '';
+        } else if (c === 'E') {
+          d.className = 'digit-char exp';
+          d.textContent = 'E';
+        } else if (c === '+' || c === '-') {
+          d.className = 'digit-char exp';
+          d.textContent = c;
+        } else {
+          d.className = 'digit-char';
+          d.textContent = c;
+        }
+        row.appendChild(d);
+      });
+    }
+  }
+
+  // Mode indicators
+  ['DEG', 'RAD', 'GRAD', 'LRN', 'STAT'].forEach(m => {
+    const el = document.getElementById('ind-' + m);
+    if (!el) return;
+    el.classList.toggle('active', m === state.angleMode || (m === 'LRN' && state.mode === 'LRN') || (m === 'STAT' && (state.mode === 'STAT' || state.mode === 'SD')));
+  });
+
+  // Blink ENT indicator
+  const lrnEl = document.getElementById('ind-LRN');
+  if (lrnEl) {
+    lrnEl.classList.toggle('blink', state.waitENT || state.waitHLT);
+  }
+
+  // Step bar
+  const bar = document.getElementById('stepBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  if (state.mode === 'LRN' && state.lrnSlot) {
+    for (let i = 0; i < MAX_STEPS; i++) {
+      const pip = document.createElement('div');
+      pip.className = 'step-pip' + (i < state.programs[state.lrnSlot].length ? ' used' : '');
+      bar.appendChild(pip);
+    }
+  }
+}
+
+// ── Flash error ───────────────────────────────────────────────
+function setError(msg = 'Error') {
+  state.error = true;
+  state.accumulator = msg;
+  errorBeep();
+  updateDisplay();
+  setTimeout(() => {
+    state.error = false;
+    updateDisplay();
+  }, 1500);
+}
+
+// ── Clear calc ─────────────────────────────────────────────────
+function clearAll() {
+  state.accumulator = 0;
+  state.pendingOp   = null;
+  state.inputBuffer = '';
+  state.error      = false;
+  state.waitENT    = false;
+  state.waitHLT    = false;
+  updateDisplay();
+}
+
+function clearEntry() {
+  state.inputBuffer = '';
+  state.accumulator = 0;
+  updateDisplay();
+}
+
+// ── Input a digit ─────────────────────────────────────────────
+function inputDigit(d) {
+  if (!state.powered) return;
+  if (state.error) { clearAll(); }
+  if (state.waitHLT) {
+    // Continue from HLT
+    state.waitHLT = false;
+    runProgramStep();
+    return;
+  }
+  if (state.waitENT) {
+    // ENT mode: accept digits for the input value
+    state.inputBuffer += d;
+    state.accumulator = parseFloat(state.inputBuffer) || 0;
+    updateDisplay();
+    return;
+  }
+  if (state.mode === 'LRN') {
+    // Record keypress into program
+    recordKey(d);
+    return;
+  }
+  // Normal entry
+  if (state.inputBuffer.length >= DISPLAY_DIGITS) return; // max digits
+  if (d === '.' && state.inputBuffer.includes('.')) return;
+  state.inputBuffer += d;
+  state.accumulator = parseFloat(state.inputBuffer);
+  state.lastVal = state.accumulator;
+  updateDisplay();
+}
+
+function inputDigitKey(d) {
+  beep();
+  inputDigit(d);
+}
+
+// ── Operations ─────────────────────────────────────────────────
+function doOp(op) {
+  if (!state.powered) return;
+  if (state.error) { clearAll(); }
+  if (state.waitENT) {
+    // Finalise ENT value then apply op
+    state.waitENT = false;
+  }
+  if (state.waitHLT) {
+    state.waitHLT = false;
+  }
+  if (state.mode === 'LRN') {
+    recordKey(op);
+    return;
+  }
+
+  const val = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+
+  if (state.pendingOp) {
+    // Chain operation: 5 + 3 × → compute 5 + 3 first, then set pendingOp to ×
+    const lhs = state.pendingOp.lhs;
+    const prev = state.pendingOp.op;
+    let result;
+    if (prev === '+') result = lhs + val;
+    else if (prev === '-') result = lhs - val;
+    else if (prev === '*') result = lhs * val;
+    else if (prev === '/') result = val === 0 ? NaN : lhs / val;
+    if (isNaN(result) || !isFinite(result)) { setError(); return; }
+    state.accumulator = result;
+    state.K = val;
+    state.pendingOp = { op, lhs: result };
+  } else {
+    state.accumulator = val;
+    state.pendingOp   = { op, lhs: val };
+    state.K = val;
+  }
+  state.inputBuffer = '';
+  updateDisplay();
+}
+
+function doEquals() {
+  if (!state.powered) return;
+  if (state.error) { clearAll(); return; }
+  if (state.waitHLT) {
+    state.waitHLT = false;
+    runProgramStep();
+    return;
+  }
+  if (state.waitENT) {
+    // Finalize input and execute ENT
+    state.waitENT = false;
+    const val = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+    state.accumulator = val;
+    state.inputBuffer = '';
+    updateDisplay();
+    if (state.progRunning) runProgramStep();
+    return;
+  }
+  if (state.mode === 'LRN') {
+    // = is recorded as a step in LRN
+    recordKey('EQ');
+    return;
+  }
+  if (!state.pendingOp) {
+    // No pending op — use last entered value (program execution case)
+    // If user presses = with no prior operation, just redisplay accumulator
+    updateDisplay();
+    return;
+  }
+  const val = parseFloat(state.inputBuffer === '' ? state.lastVal : state.inputBuffer);
+  let result;
+  const lhs = state.pendingOp.lhs;
+  const op  = state.pendingOp.op;
+  if (op === '+') result = lhs + val;
+  else if (op === '-') result = lhs - val;
+  else if (op === '*') result = lhs * val;
+  else if (op === '/') result = val === 0 ? NaN : lhs / val;
+  else { result = val; }
+  if (isNaN(result) || !isFinite(result)) { setError(); return; }
+  state.accumulator = result;
+  state.pendingOp   = null;
+  state.inputBuffer = '';
+  state.afterEquals = true;  // next digit starts fresh
+  updateDisplay();
+}
+
+// ── Functions ──────────────────────────────────────────────────
+function applyUnary(fn, invFn) {
+  if (!state.powered) return;
+  if (state.mode === 'LRN') {
+    recordKey(state.shift ? invFn : fn);
+    return;
+  }
+  if (state.error) { clearAll(); }
+  let val = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+  let result;
+  if (state.shift && invFn) {
+    result = invFn(val);
+  } else {
+    result = fn(val);
+  }
+  if (isNaN(result) || !isFinite(result)) { setError(); return; }
+  state.accumulator = result;
+  state.inputBuffer = '';
+  state.shift = false;
+  updateDisplay();
+}
+
+function shiftOff() {
+  state.shift = false;
+  state.secondf = false;
+  state.inv = false;
+  // Don't clobber lrnSlot while in LRN mode
+  if (state.mode !== 'LRN') { state.lrnSlot = null; }
+}
+
+// ── Trigonometric ─────────────────────────────────────────────
+function doSIN() {
+  applyUnary(
+    v => Math.sin(toRad(v)),
+    v => fromRad(Math.asin(v))
+  );
+}
+function doCOS() {
+  applyUnary(
+    v => Math.cos(toRad(v)),
+    v => fromRad(Math.acos(v))
+  );
+}
+function doTAN() {
+  applyUnary(
+    v => Math.tan(toRad(v)),
+    v => fromRad(Math.atan(v))
+  );
+}
+function doLOG() {
+  applyUnary(
+    v => Math.log10(v),
+    v => Math.pow(10, v)
+  );
+}
+function doLN() {
+  applyUnary(
+    v => Math.log(v),
+    v => Math.exp(v)
+  );
+}
+function doSQR() {
+  applyUnary(
+    v => Math.sqrt(v),
+    null
+  );
+}
+function doSQR_inv() {
+  applyUnary(
+    null,
+    v => Math.pow(v, 2)
+  );
+}
+function doRECIP() {
+  applyUnary(
+    v => 1 / v,
+    null
+  );
+}
+function doRECIP_x2() {
+  applyUnary(
+    null,
+    v => v * v
+  );
+}
+function doFACT() {
+  applyUnary(
+    v => fact(v),
+    null
+  );
+}
+function doEXP() {
+  if (!state.powered) return;
+  if (state.mode === 'LRN') { recordKey('EXP'); return; }
+  if (state.inputBuffer.includes('E') || state.inputBuffer.includes('e')) return;
+  let val = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+  // Start entering exponent
+  state.inputBuffer = val.toString() + 'E';
+  state.accumulator = val;
+  updateDisplay();
+}
+function doNEG() {
+  if (!state.powered) return;
+  if (state.mode === 'LRN') { recordKey('NEG'); return; }
+  if (state.inputBuffer.startsWith('-')) {
+    state.inputBuffer = state.inputBuffer.slice(1);
+  } else if (state.inputBuffer !== '') {
+    state.inputBuffer = '-' + state.inputBuffer;
+  } else {
+    state.accumulator = -state.accumulator;
+  }
+  updateDisplay();
+}
+function doENG() {
+  if (!state.powered) return;
+  beep();
+  // Roll exponent by 3
+  let val = state.accumulator;
+  state.accumulator = val * 1000;
+  updateDisplay();
+}
+function doPI() {
+  if (!state.powered) return;
+  beep();
+  state.accumulator = PI;
+  state.inputBuffer = '';
+  updateDisplay();
+}
+function doE_const() {
+  if (!state.powered) return;
+  beep();
+  state.accumulator = E;
+  state.inputBuffer = '';
+  updateDisplay();
+}
+function doPCT() {
+  if (!state.powered) return;
+  beep();
+  let val = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+  state.accumulator = val / 100;
+  state.inputBuffer = '';
+  updateDisplay();
+}
+
+// ── Memory ─────────────────────────────────────────────────────
+function doSTO() {
+  if (!state.powered) return;
+  beep();
+  state.memory = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+  state.inputBuffer = '';
+  updateDisplay();
+}
+function doSWAP() {
+  if (!state.powered) return;
+  beep();
+  const tmp = state.accumulator;
+  state.accumulator = state.memory;
+  state.memory = tmp;
+  updateDisplay();
+}
+function doMR() {
+  if (!state.powered) return;
+  beep();
+  state.accumulator = state.memory;
+  updateDisplay();
+}
+function doMC() {
+  if (!state.powered) return;
+  beep();
+  state.memory = 0;
+  updateDisplay();
+}
+
+// ── DRG (cycle angle mode) ────────────────────────────────────
+function doDRG() {
+  if (!state.powered) return;
+  beep();
+  const modes = ['DEG', 'RAD', 'GRAD'];
+  state.angleMode = modes[(modes.indexOf(state.angleMode) + 1) % 3];
+  updateDisplay();
+}
+
+// ── Mode ──────────────────────────────────────────────────────
+function doMODE() {
+  if (!state.powered) return;
+  beep();
+  // Cycle through calculator modes
+  if (state.mode === 'CALC') {
+    state.mode = 'LRN';
+  } else if (state.mode === 'LRN') {
+    state.mode = 'STAT';
+    state.angleMode = 'DEG';
+  } else if (state.mode === 'STAT') {
+    state.mode = 'SD';
+  } else {
+    state.mode = 'CALC';
+  }
+  state.lrnSlot = null;
+  state.lrnStep = 0;
+  updateDisplay();
+}
+
+// ── Program recording ──────────────────────────────────────────
+function doP1() { handleProgKey('P1'); }
+function doP2() { handleProgKey('P2'); }
+function doP3() { handleProgKey('P3'); }
+
+function handleProgKey(slot) {
+  if (!state.powered) return;
+  beep();
+  if (state.mode === 'LRN') {
+    // Load program slot for editing
+    state.lrnSlot = slot;
+    state.lrnStep = state.programs[slot].length;
+    updateDisplay();
+    return;
+  }
+  if (state.progRunning) {
+    // Already running
+    return;
+  }
+  // Save state for return — preserve pendingOp across program execution
+  state.progRunning  = true;
+  state.progSlot      = slot;
+  state.progIP        = 0;
+  state.progStack     = [];
+  state.progSnapshot  = {
+    accumulator:  state.accumulator,
+    memory:        state.memory,
+    pendingOp:     state.pendingOp,   // preserve across program
+    inputBuffer:   '',
+    error:         false,
+  };
+  state.pendingOp  = null;  // clear so = completes operations entered before =
+  state.afterEquals = false; // reset — next = starts fresh in this program
+  runProgramStep();
+}
+
+function recordKey(keyName) {
+  if (!state.lrnSlot) {
+    // Pick the first empty slot
+    for (const s of ['P1', 'P2', 'P3']) {
+      if (state.programs[s].length === 0) { state.lrnSlot = s; break; }
+    }
+    if (!state.lrnSlot) { setError('FULL'); return; }
+  }
+  const slot = state.lrnSlot;
+  if (state.programs[slot].length >= MAX_STEPS) {
+    setError('FULL');
+    return;
+  }
+  beep();
+  state.programs[slot].push(keyName);
+  state.lrnStep = state.programs[slot].length;
+  // Simulate what this key would display
+  // (just update display with current accumulator — same as manual mode)
+  // Don't change accumulator, just update step counter
+  updateDisplay();
+}
+
+function doDEL() {
+  if (!state.powered) return;
+  beep();
+  if (state.mode === 'LRN' && state.lrnSlot) {
+    if (state.programs[state.lrnSlot].length > 0) {
+      state.programs[state.lrnSlot].pop();
+      state.lrnStep = state.programs[state.lrnSlot].length;
+    }
+    updateDisplay();
+    return;
+  }
+  // Backspace in entry
+  if (state.inputBuffer.length > 0) {
+    state.inputBuffer = state.inputBuffer.slice(0, -1);
+    state.accumulator = parseFloat(state.inputBuffer) || 0;
+    updateDisplay();
+  }
+}
+
+function doINS() {
+  if (!state.powered) return;
+  beep();
+  // Insert not implemented in this simplified model
+  updateDisplay();
+}
+
+// ── Program execution engine ────────────────────────────────────
+const JUMP_KEYS = new Set(['LBL0','LBL1','LBL2','LBL3','LBL4','LBL5','LBL6','LBL7','LBL8','LBL9']);
+const COND_KEYS = new Set(['X=0','X≥0','X>0','X<0','X≤0']);
+
+function runProgramStep() {
+  if (!state.progRunning) return;
+  const prog = state.programs[state.progSlot];
+  if (state.progIP >= prog.length) {
+    // Program ended
+    endProgram();
+    return;
+  }
+  const key = prog[state.progIP];
+  state.progIP++;
+  executeKey(key, true);
+}
+
+function endProgram() {
+  // Preserve the computed result — restore non-result state
+  state.memory       = state.progSnapshot.memory;
+  state.pendingOp   = state.progSnapshot.pendingOp; // what it was before program started
+  state.inputBuffer = state.progSnapshot.inputBuffer;
+  state.error       = state.progSnapshot.error;
+  state.progRunning = false;
+  state.progSlot    = null;
+  state.progIP      = 0;
+  state.progSnapshot = null;
+  updateDisplay();
+}
+
+function executeKey(key, fromProgram = false) {
+  // Execute a single key from a program or from manual entry
+  // Keys that pause/branch don't call runProgramStep at the end (they handle it themselves)
+  let doAdvance = true; // whether to advance program counter after this key
+
+  // Key dispatch
+  switch (key) {
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      if (state.waitENT) {
+        state.inputBuffer += key;
+        state.accumulator = parseFloat(state.inputBuffer);
+      } else {
+        state.inputBuffer = key;
+        state.accumulator = parseFloat(state.inputBuffer);
+      }
+      state.lastVal = state.accumulator;
+      if (state.afterEquals) {
+        state.pendingOp = null;
+        state.afterEquals = false;
+      }
+      break;
+
+    case 'DOT':
+      if (state.inputBuffer.includes('.')) return;
+      state.inputBuffer += '.';
+      break;
+
+    case 'EQ':
+      if (state.waitENT) {
+        state.waitENT = false;
+        const val = parseFloat(state.inputBuffer === '' ? state.accumulator : state.inputBuffer);
+        state.accumulator = val;
+        state.inputBuffer = '';
+        updateDisplay();
+        if (state.progRunning) { runProgramStep(); }
+        return;
+      }
+      if (state.waitHLT) {
+        state.waitHLT = false;
+        updateDisplay();
+        if (state.progRunning) { runProgramStep(); }
+        return;
+      }
+      // Normal = (or from program)
+      if (state.mode === 'LRN') { recordKey('EQ'); return; }
+      if (!state.pendingOp) {
+        updateDisplay();
+        return;
+      }
+      {
+        const val = parseFloat(state.inputBuffer === '' ? state.lastVal : state.inputBuffer);
+        let result;
+        const lhs = state.pendingOp.lhs;
+        const op  = state.pendingOp.op;
+        if (op === '+') result = lhs + val;
+        else if (op === '-') result = lhs - val;
+        else if (op === '*') result = lhs * val;
+        else if (op === '/') result = val === 0 ? NaN : lhs / val;
+        else result = val;
+        if (isNaN(result) || !isFinite(result)) { setError(); return; }
+        state.accumulator = result;
+        state.pendingOp  = null;
+        state.inputBuffer = '';
+        state.afterEquals = true;
+      }
+      // EQ ends the program — result is already in accumulator
+      // fx-3600P: = computes and ends the program, result stays on display
+      doAdvance = false;
+      if (state.progRunning) { endProgram(); }
+      break;
+
+    case 'ADD':  doOp('+'); break;
+    case 'SUB':  doOp('-'); break;
+    case 'MUL':  doOp('*'); break;
+    case 'DIV':  doOp('/'); break;
+
+    case 'SIN':  doSIN(); break;
+    case 'COS':  doCOS(); break;
+    case 'TAN':  doTAN(); break;
+    case 'LOG':  doLOG(); break;
+    case 'LN':   doLN();  break;
+    case 'SQR':  doSQR(); break;
+    case 'RECIP': doRECIP(); break;
+    case 'FACT': doFACT(); break;
+    case 'PI':   doPI();  break;
+    case 'EXP':  doEXP(); break;
+    case 'NEG':  doNEG(); break;
+    case 'ENG':  doENG(); break;
+    case 'PCT':  doPCT(); break;
+    case 'STO':  doSTO(); break;
+    case 'SWAP': doSWAP(); break;
+    case 'DRG':  doDRG(); break;
+    case 'LPRN': /* no-op */ break;
+    case 'RPRN': /* no-op */ break;
+    case 'LBRK': /* no-op */ break;
+    case 'Y':    /* no-op */ break;
+
+    case 'ENT':
+      if (state.progRunning) {
+        state.waitENT = true;
+        state.inputBuffer = '';
+        updateDisplay();
+        doAdvance = false;
+      }
+      break;
+
+    case 'HLT':
+      if (state.progRunning) {
+        state.waitHLT = true;
+        updateDisplay();
+        doAdvance = false;
+      }
+      break;
+
+    case 'X=0':
+    case 'X≥0':
+    case 'X>0':
+    case 'X<0':
+    case 'X≤0': {
+      if (!state.progRunning) break;
+      let cond = false;
+      const v = state.accumulator;
+      if (key === 'X=0') cond = (v === 0);
+      else if (key === 'X≥0') cond = (v >= 0);
+      else if (key === 'X>0') cond = (v > 0);
+      else if (key === 'X<0') cond = (v < 0);
+      else if (key === 'X≤0') cond = (v <= 0);
+      if (state.inv) { cond = !cond; state.inv = false; }
+      if (cond) {
+        const label = findLabel(state.progSlot, state.progIP);
+        if (label !== null) state.progIP = label;
+      }
+      doAdvance = false;
+      break;
+    }
+
+    case 'LBL0': case 'LBL1': case 'LBL2': case 'LBL3': case 'LBL4':
+    case 'LBL5': case 'LBL6': case 'LBL7': case 'LBL8': case 'LBL9':
+      // Label — just continue
+      doAdvance = false;
+      break;
+
+    default:
+      return;
+  }
+
+  if (state.progRunning && doAdvance) {
+    updateDisplay();
+    runProgramStep();
+  } else if (!state.progRunning) {
+    updateDisplay();
+  }
+}
+
+function findLabel(slot, fromIP) {
+  // Find the first LBL* at or after fromIP in the program
+  const prog = state.programs[slot];
+  for (let i = fromIP; i < prog.length; i++) {
+    if (prog[i].startsWith('LBL')) return i;
+  }
+  return null;
+}
+
+// ── SHIFT / 2ndF ───────────────────────────────────────────────
+function doSHIFT() {
+  if (!state.powered) return;
+  beep();
+  state.shift = !state.shift;
+  state.secondf = false;
+  document.querySelectorAll('.key').forEach(k => {
+    k.classList.toggle('shift-active', state.shift);
+    k.classList.remove('secondf-active');
+  });
+}
+
+function do2ndF() {
+  if (!state.powered) return;
+  beep();
+  state.secondf = !state.secondf;
+  state.shift = false;
+  document.querySelectorAll('.key').forEach(k => {
+    k.classList.toggle('secondf-active', state.secondf);
+    k.classList.remove('shift-active');
+  });
+}
+
+function doINV() {
+  if (!state.powered) return;
+  beep();
+  state.inv = !state.inv;
+}
+
+// ── Power ─────────────────────────────────────────────────────
+function doOFF() {
+  beep(300, 40);
+  state.powered = false;
+  updateDisplay();
+}
+
+function doAC() {
+  if (!state.powered) {
+    // Power on
+    state.powered = true;
+    state.error   = false;
+    powerOnBeep();
+    updateDisplay();
+    return;
+  }
+  // In LRN mode, AC exits learning mode and returns to calculation
+  if (state.mode === 'LRN') {
+    state.mode     = 'CALC';
+    state.lrnSlot  = null;
+    state.lrnStep  = 0;
+    state.shift    = false;
+    state.secondf  = false;
+    state.inv      = false;
+    document.querySelectorAll('.key').forEach(k => {
+      k.classList.remove('shift-active', 'secondf-active');
+    });
+    updateDisplay();
+    return;
+  }
+  beep();
+  clearAll();
+  state.pendingOp   = null;
+  state.inputBuffer = '';
+  state.shift       = false;
+  state.secondf     = false;
+  state.inv         = false;
+  state.waitENT     = false;
+  state.waitHLT     = false;
+  document.querySelectorAll('.key').forEach(k => {
+    k.classList.remove('shift-active', 'secondf-active');
+  });
+  updateDisplay();
+}
+
+// ── Mode button sub-menu ──────────────────────────────────────
+function doMODE_sub(key) {
+  beep();
+  const modes = ['DEG', 'RAD', 'GRAD'];
+  const idx   = modes.indexOf(state.angleMode);
+  if (key === 'DRG') {
+    state.angleMode = modes[(idx + 1) % 3];
+  }
+  updateDisplay();
+}
+
+// ── C key ─────────────────────────────────────────────────────
+function doC() {
+  beep();
+  state.inputBuffer = '';
+  state.accumulator = 0;
+  updateDisplay();
+}
+
+// ── Key mapping ───────────────────────────────────────────────
+function dispatchKey(code, isShift, isCtrl) {
+  if (!state.powered && code !== 'AC') return;
+
+  // SHIFT or 2ndF modifiers
+  if (isShift && code !== 'SHIFT') {
+    state.shift = true;
+    document.querySelectorAll('.key').forEach(k => {
+      k.classList.toggle('shift-active', state.shift);
+      k.classList.remove('secondf-active');
+    });
+  }
+  if (isCtrl && code !== '2ndF') {
+    state.secondf = true;
+    document.querySelectorAll('.key').forEach(k => {
+      k.classList.toggle('secondf-active', state.secondf);
+      k.classList.remove('shift-active');
+    });
+  }
+
+  // Normal dispatch (no modifier)
+  const k = code;
+  const SH = state.shift;
+  const SF = state.secondf;
+
+  if (k === 'SHIFT')  { doSHIFT(); return; }
+  if (k === '2ndF')   { do2ndF(); return; }
+
+  // Program slots
+  if (k === 'P1') { doP1(); shiftOff(); updateDisplay(); return; }
+  if (k === 'P2') { doP2(); shiftOff(); updateDisplay(); return; }
+  if (k === 'P3') { doP3(); shiftOff(); updateDisplay(); return; }
+  if (k === 'STO') { doSTO(); shiftOff(); updateDisplay(); return; }
+  if (k === 'SWAP') { doSWAP(); shiftOff(); updateDisplay(); return; }
+
+  // Mode and power
+  if (k === 'MODE')  { doMODE(); shiftOff(); updateDisplay(); return; }
+  if (k === 'OFF')   { doOFF(); return; }
+  if (k === 'AC')    { doAC(); return; }
+  if (k === 'C')     { doC(); shiftOff(); updateDisplay(); return; }
+  if (k === 'DEL')   { doDEL(); shiftOff(); updateDisplay(); return; }
+  if (k === 'INS')   { doINS(); shiftOff(); updateDisplay(); return; }
+  if (k === 'HLT')   {
+    if (SH) { doINV(); shiftOff(); updateDisplay(); return; }
+    if (SF) { /* nPr placeholder */ shiftOff(); updateDisplay(); return; }
+    doHLT(); shiftOff(); updateDisplay(); return;
+  }
+
+  // SHIFT variants
+  if (SH) {
+    switch (k) {
+      case 'RECIP': doRECIP_x2(); shiftOff(); updateDisplay(); return;
+      case 'SQR': /* x² via 2ndF? */ shiftOff(); updateDisplay(); return;
+      case 'SIN': doSIN(); shiftOff(); updateDisplay(); return; // sin⁻¹
+      case 'COS': doCOS(); shiftOff(); updateDisplay(); return; // cos⁻¹
+      case 'TAN': doTAN(); shiftOff(); updateDisplay(); return; // tan⁻¹
+      case 'LOG': doLOG(); shiftOff(); updateDisplay(); return; // 10ˣ
+      case 'LN':  doLN();  shiftOff(); updateDisplay(); return; // eˣ
+      case 'DRG': doDRG(); shiftOff(); updateDisplay(); return;
+      case 'LBRK': /* nCr placeholder */ shiftOff(); updateDisplay(); return;
+      case 'PI':  doE_const(); shiftOff(); updateDisplay(); return; // e
+      default: shiftOff(); updateDisplay(); return;
+    }
+  }
+
+  // 2ndF variants
+  if (SF) {
+    switch (k) {
+      case 'SIN': /* sin⁻¹ → use SHIFT SIN */ shiftOff(); updateDisplay(); return;
+      case 'COS': /* cos⁻¹ */ shiftOff(); updateDisplay(); return;
+      case 'TAN': /* tan⁻¹ */ shiftOff(); updateDisplay(); return;
+      case 'LOG': /* 10ˣ */ shiftOff(); updateDisplay(); return;
+      case 'LN':  /* eˣ */ shiftOff(); updateDisplay(); return;
+      case 'LBRK': /* nCr */ shiftOff(); updateDisplay(); return;
+      case 'PI':  doE_const(); shiftOff(); updateDisplay(); return; // e
+      case 'FACT': /* nPr */ shiftOff(); updateDisplay(); return;
+      case 'Y':   /* x^y placeholder */ shiftOff(); updateDisplay(); return;
+      default: shiftOff(); updateDisplay(); return;
+    }
+  }
+
+  // Normal keys
+  switch (k) {
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      inputDigitKey(k); shiftOff(); updateDisplay(); return;
+    case 'DOT':  inputDigitKey('.'); shiftOff(); updateDisplay(); return;
+    case 'ADD':  doOp('+'); shiftOff(); updateDisplay(); return;
+    case 'SUB':  doOp('-'); shiftOff(); updateDisplay(); return;
+    case 'MUL':  doOp('*'); shiftOff(); updateDisplay(); return;
+    case 'DIV':  doOp('/'); shiftOff(); updateDisplay(); return;
+    case 'EQ':   doEquals(); shiftOff(); updateDisplay(); return;
+    case 'NEG':  doNEG(); shiftOff(); updateDisplay(); return;
+    case 'EXP':  doEXP(); shiftOff(); updateDisplay(); return;
+    case 'ENG':  doENG(); shiftOff(); updateDisplay(); return;
+    case 'SIN':  doSIN(); shiftOff(); updateDisplay(); return;
+    case 'COS':  doCOS(); shiftOff(); updateDisplay(); return;
+    case 'TAN':  doTAN(); shiftOff(); updateDisplay(); return;
+    case 'LOG':  doLOG(); shiftOff(); updateDisplay(); return;
+    case 'LN':   doLN();  shiftOff(); updateDisplay(); return;
+    case 'SQR':  doSQR(); shiftOff(); updateDisplay(); return;
+    case 'RECIP': doRECIP(); shiftOff(); updateDisplay(); return;
+    case 'FACT': doFACT(); shiftOff(); updateDisplay(); return;
+    case 'PI':   doPI();  shiftOff(); updateDisplay(); return;
+    case 'PCT':  doPCT(); shiftOff(); updateDisplay(); return;
+    case 'DRG':  doDRG(); shiftOff(); updateDisplay(); return;
+    case 'STO':  doSTO(); shiftOff(); updateDisplay(); return;
+    case 'SWAP': doSWAP(); shiftOff(); updateDisplay(); return;
+    case 'LPRN': /* no-op */ shiftOff(); updateDisplay(); return;
+    case 'RPRN': /* no-op */ shiftOff(); updateDisplay(); return;
+    case 'LBRK': /* no-op */ shiftOff(); updateDisplay(); return;
+    case 'Y':    /* no-op */ shiftOff(); updateDisplay(); return;
+    case 'HLT':  doHLT(); shiftOff(); updateDisplay(); return;
+    case 'ENT':  doENT(); shiftOff(); updateDisplay(); return;
+    case 'K':    doDRG(); shiftOff(); updateDisplay(); return; // DRG shortcut
+    default: shiftOff(); updateDisplay(); return;
+  }
+}
+
+function doHLT() {
+  if (state.mode === 'LRN') {
+    recordKey('HLT');
+  } else {
+    state.waitHLT = true;
+    updateDisplay();
+  }
+}
+
+function doENT() {
+  if (state.mode === 'LRN') {
+    recordKey('ENT');
+  } else {
+    state.waitENT = true;
+    state.inputBuffer = '';
+    updateDisplay();
+  }
+}
+
+// ── Mouse/touch events ─────────────────────────────────────────
+function findKeyEl(target) {
+  let el = target;
+  while (el && !el.classList.contains('key') && !el.classList.contains('key-prog') && el !== document.body) {
+    el = el.parentElement;
+  }
+  return el;
+}
+
+document.getElementById('keyboard').addEventListener('mousedown', e => {
+  e.preventDefault();
+  const el = findKeyEl(e.target);
+  if (!el || el === document.body) return;
+  el.classList.add('pressed');
+  const code  = el.dataset.code;
+  const isShift = el.dataset.code === 'SHIFT' ? false : e.shiftKey;
+  const isCtrl  = el.dataset.code === '2ndF'  ? false : e.ctrlKey;
+  dispatchKey(code, isShift || state.shift, isCtrl || state.secondf);
+});
+
+document.getElementById('keyboard').addEventListener('mouseup', e => {
+  document.querySelectorAll('.key.pressed, .key-prog.pressed').forEach(k => k.classList.remove('pressed'));
+});
+
+document.getElementById('keyboard').addEventListener('mouseleave', () => {
+  document.querySelectorAll('.key.pressed, .key-prog.pressed').forEach(k => k.classList.remove('pressed'));
+});
+
+// Touch support
+document.getElementById('keyboard').addEventListener('touchstart', e => {
+  e.preventDefault();
+  const el = findKeyEl(e.target);
+  if (!el || el === document.body) return;
+  el.classList.add('pressed');
+  const code = el.dataset.code;
+  dispatchKey(code, state.shift, state.secondf);
+}, { passive: false });
+
+document.getElementById('keyboard').addEventListener('touchend', e => {
+  e.preventDefault();
+  document.querySelectorAll('.key.pressed, .key-prog.pressed').forEach(k => k.classList.remove('pressed'));
+}, { passive: false });
+
+// ── Keyboard shortcuts ────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // Don't intercept if user is typing in an input
+  const k = e.key;
+  const SH = e.shiftKey;
+  const CS = e.ctrlKey || e.metaKey;
+
+  // Prevent default for calculator keys
+  if (['0','1','2','3','4','5','6','7','8','9','.'].includes(k)) return; // let through
+  if (['+','-','*','/','Enter','Escape','Backspace','Delete','Insert'].includes(k)) {
+    e.preventDefault();
+  }
+
+  if (k === 'Escape')              { dispatchKey('AC', false, false); }
+  else if (k === 'Backspace')      { dispatchKey('C', false, false); }
+  else if (k === 'Delete')         { dispatchKey('DEL', false, false); }
+  else if (k === 'Insert')         { dispatchKey('INS', false, false); }
+  else if (k === 'Enter')          { dispatchKey('EQ', false, false); }
+  else if (k === '+')              { dispatchKey('ADD', SH, false); }
+  else if (k === '-')              { dispatchKey('SUB', false, false); }
+  else if (k === '*')              { dispatchKey('MUL', false, false); }
+  else if (k === '/')              { dispatchKey('DIV', false, false); }
+  else if (k === '(')              { dispatchKey('LPRN', false, false); }
+  else if (k === ')')              { dispatchKey('RPRN', false, false); }
+  else if (k === '^')              { dispatchKey('Y', false, false); }
+  else if (k === '[')              { dispatchKey('LBRK', false, false); }
+  else if (k === ']')              { /* RBRK */ }
+  else if (k === '%')              { dispatchKey('PCT', false, false); }
+  else if (k === '!')              { dispatchKey('FACT', false, false); }
+  else if (k === 'p' || k === 'P') { dispatchKey('PI', false, false); }
+  else if (k === 'e' && !SH)       { dispatchKey('LN', false, false); }
+  else if (k === 'l' || k === 'L') { dispatchKey('LOG', false, false); }
+  else if (k === 'n' || k === 'N') { dispatchKey('LN', false, false); }
+  else if (k === 's' || k === 'S') { dispatchKey('SIN', SH, false); }
+  else if (k === 'c' || k === 'C') { dispatchKey('COS', SH, false); }
+  else if (k === 't' || k === 'T') { dispatchKey('TAN', SH, false); }
+  else if (k === 'r' || k === 'R') { dispatchKey('SQR', false, false); }
+  else if (k === 'q' || k === 'Q') { dispatchKey('SQR', false, false); }
+  else if (k === 'i' || k === 'I') { dispatchKey('RECIP', false, false); }
+  else if (k === 'm' || k === 'M') { dispatchKey('STO', false, false); }
+  else if (k === 'x' || k === 'X') { dispatchKey('SWAP', false, false); }
+  else if (k === 'h' || k === 'H') { dispatchKey('HLT', false, false); }
+  else if (k === 'F1')             { dispatchKey('P1', false, false); }
+  else if (k === 'F2')             { dispatchKey('P2', false, false); }
+  else if (k === 'F3')             { dispatchKey('P3', false, false); }
+  else if (k === 'F4')             { dispatchKey('P1', false, false); }
+  else if (k === 'd' || k === 'D') { dispatchKey('MODE', false, false); }
+  else if (k === 'g' || k === 'G') { dispatchKey('DRG', false, false); }
+  else if (k === 'o' || k === 'O') { dispatchKey('OFF', false, false); }
+  else if (k === 'z' || k === 'Z') { dispatchKey('NEG', false, false); }
+  else if (k === 'ArrowUp')        { dispatchKey('ENG', false, false); }
+  else if (k === 'ArrowDown')      { /* roll down? */ }
+  else if (k === '`')              { dispatchKey('NEG', false, false); }
+  else if (k === '~')              { dispatchKey('PI', false, false); }
+  else if (k >= '0' && k <= '9' && !SH) {
+    dispatchKey(k, false, false);
+  }
+});
+
+// ── Speaker mute ───────────────────────────────────────────────
+const speakerIcon = document.getElementById('speakerIcon');
+speakerIcon.addEventListener('click', () => {
+  state.beepMuted = !state.beepMuted;
+  speakerIcon.classList.toggle('muted', state.beepMuted);
+  if (!state.beepMuted) beep();
+});
+
+// ── Init ───────────────────────────────────────────────────────
+window.__calcState = state;
+window.__calcBeep  = beep;
+updateDisplay();
+
+// ── Step bar ──────────────────────────────────────────────────
+const stepBar = document.getElementById('stepBar');
+if (stepBar) {
+  stepBar.innerHTML = '';
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'step-pip';
+    stepBar.appendChild(pip);
+  }
+}
+</script>
+</body>
+</html>
